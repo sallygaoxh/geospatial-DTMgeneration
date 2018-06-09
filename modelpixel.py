@@ -3,14 +3,13 @@ import math
 import os
 import numpy as np
 import matplotlib.pyplot as pyplot
-import cv2
 
-input_file = 'coord_outputs.csv'
+input_file = 'final_project_point_cloud.fuse'
 points = open(input_file).readlines()
 
 point_list = []
 for point in points:
-    p_tmp = point.strip().split(",")
+    p_tmp = point.strip().split(" ")
     p_tmp_tofloat = list(map(float, p_tmp))
     point_list.append(p_tmp_tofloat)
 
@@ -27,9 +26,9 @@ minY = min(y)
 maxX = max(x)
 maxY = max(y)
 
-ver_pix_num = 150 # change
-delta_coor = (maxX-minX) / ver_pix_num;
-hor_pix_num = int((maxY-minY) / delta_coor);
+ver_pix_num = 70 # change
+delta_coor = (maxX-minX) / ver_pix_num
+hor_pix_num = int((maxY-minY) / delta_coor)
 
 GPset = []
 
@@ -37,14 +36,11 @@ for i in range(0, ver_pix_num):
     tmp = []
     for j in range(0, hor_pix_num):
         tmp.append([])
-        
+
     GPset.append(tmp)
 
-#print 'GPset size', np.shape(GPset)
 
 for point in point_list:
-#for c in range(0, 100):
-#    point = point_list[c]
     x = point[0]
     y = point[1]
     alt = point[2]
@@ -57,63 +53,67 @@ for point in point_list:
 
     #print pix_x, pix_y
 
-    #if x==4363910.64554 and y==850489.133023:
-#        print pix_x, pix_y
-
     GPset[pix_x][pix_y].append((x,y,alt,i))
 
 
 
 
 #S(x,y) = STD(GP(x,y))
-whole_col = []
-DTM_col = []
+DTM_std = []
+DTM_med = []
+DTM_min = []
+DTM_exist = []
 for i in range(0, ver_pix_num):
-    each_row = []
-    DTM_row = []
+    std_row = []
+    med_row = []
+    min_row = []
+    exist_row = []
     for j in range(0, hor_pix_num):
         if GPset[i][j]:
             std_val = np.std([GPset[i][j][k][2] for k in range(0, len(GPset[i][j]))])
             md_val = np.median([GPset[i][j][k][2] for k in range(0, len(GPset[i][j]))])
+            min_val = np.min([GPset[i][j][k][2] for k in range(0, len(GPset[i][j]))])
+            exist_val = 100
             #print md_val
         else:
-            std_val = 0 
-            md_val = 220
-        each_row.append(std_val)
-        DTM_row.append(md_val*1000)
+            std_val = 0
+            md_val = 222
+            min_val = 222
+            exist_val = 0
 
-    whole_col.append(each_row)
-    DTM_col.append(DTM_row)
+        std_row.append(std_val)
+        med_row.append(md_val*1000)
+        min_row.append(min_val)
+        exist_row.append(exist_val)
 
+    DTM_std.append(std_row)
+    DTM_med.append(med_row)
+    DTM_min.append(min_row)
+    DTM_exist.append(exist_row)
 
-S = np.array(whole_col)
-DTM = np.array(DTM_col)
+# STD = np.array(DTM_std)
+STD = np.fliplr(np.array(DTM_std).T).T
+# MED = np.array(DTM_med)
+MED = np.fliplr(np.array(DTM_med).T).T
+# MIN = np.array(DTM_min)
+MIN = np.fliplr(np.array(DTM_min).T).T
+# EXIST = np.array(DTM_exist)
+EXIST = np.fliplr(np.array(DTM_exist).T).T
 
-
-index = np.argmax(S)
+# standard deviation
+index = np.argmax(STD)
 row = int(index) / hor_pix_num
 col = int(index) % hor_pix_num
-#print row, col
-max_pix = S[row][col]
-#print max_pix
+#max_pix = STD[row][col]
 
-hist_can = []
-for p in GPset[row][col]:
-    hist_can.append(p[2])
+# hist_can = []
+# for p in GPset[row][col]:
+#     hist_can.append(p[2])
 
-# the histogram of the data
-num_bins = 20
-n, bins, patches = pyplot.hist(hist_can, num_bins)  
-#pyplot.plot(bins, y, 'r--')
-pyplot.show()  
-
-
-
-
-
-
-#print np.shape(S)
-#print S
+# the histogram of max std
+# num_bins = 20
+# n, bins, patches = pyplot.hist(hist_can, num_bins)
+# pyplot.show()
 
 
 '''
@@ -123,18 +123,18 @@ with open(csvfile, "w") as output:
     writer.writerows(whole_col)
 '''
 
-
-
-pyplot.imshow(S)
+pyplot.imshow(STD)
 pyplot.colorbar()
 pyplot.show()
 
-
-pyplot.imshow(DTM)
+pyplot.imshow(MED)
 pyplot.colorbar()
 pyplot.show()
 
+pyplot.imshow(MIN)
+pyplot.colorbar()
+pyplot.show()
 
-
-
-
+pyplot.imshow(EXIST)
+pyplot.colorbar()
+pyplot.show()
