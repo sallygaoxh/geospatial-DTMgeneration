@@ -1,9 +1,18 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+June 2018
+
+@author: Sylvia, Xiaohan
+
+"""
+
 import csv
 import math
 import os
 import numpy as np
 import matplotlib.pyplot as pyplot
-import cv2
+from scipy import interpolate
 
 input_file = 'final_project_point_cloud.fuse'
 points = open(input_file).readlines()
@@ -25,7 +34,7 @@ minY = min(y)
 maxX = max(x)
 maxY = max(y)
 
-ver_pix_num = 70 #Zoom in -> one pixel => more coord
+ver_pix_num = 80 #Zoom in -> one pixel => more coord
 delta_coor = (maxX-minX) / ver_pix_num
 hor_pix_num = int((maxY-minY) / delta_coor)
 
@@ -35,7 +44,7 @@ for i in range(0, ver_pix_num):
     tmp = []
     for j in range(0, hor_pix_num):
         tmp.append([])
-        
+
     GPset.append(tmp)
 
 
@@ -50,7 +59,34 @@ for point in point_list:
 
     GPset[pix_x][pix_y].append((x,y,alt,i))
 
+#delete boundary rows with less than 8% non-empty pixels
+while True:
+    if len(filter(None, GPset[0])) < 0.08*len(GPset[0]):
+         GPset = GPset[1:]
+    else:
+        break
+while True:
+    if len(filter(None, GPset[-1])) < 0.08*len(GPset[0]):
+         GPset = GPset[:-1]
+    else:
+        break
 
+#delete boundary columns with less than 8% non-empty pixels
+GPset = np.asarray(GPset).T
+while True:
+    if len(filter(None, GPset[0])) < 0.08*len(GPset[0]):
+         GPset = GPset[1:]
+    else:
+        break
+while True:
+    if len(filter(None, GPset[-1])) < 0.08*len(GPset[0]):
+         GPset = GPset[:-1]
+    else:
+        break
+GPset = GPset.T
+
+ver_pix_num = GPset.shape[0]
+hor_pix_num = GPset.shape[1]
 #S(x,y) = STD(GP(x,y))
 DTM_std = []
 DTM_med = []
@@ -68,7 +104,7 @@ for i in range(0, ver_pix_num):
             min_val = np.min([GPset[i][j][k][2] for k in range(0, len(GPset[i][j]))])
             exist_val = 100
         else:
-            std_val = 0 
+            std_val = 0
             md_val = 220 # assume
             min_val = 220 # assume
             exist_val = 0
@@ -113,7 +149,7 @@ for k in range(0, 2):
                         count+=1
                     else:
                         d = inter[i+1][j]
-                        
+
                     if count == 4 or count == 3:
                         new_val = 220
                     else:
@@ -197,8 +233,8 @@ for p in GPset[row][col]:
 
 # the histogram of max std
 num_bins = 20
-n, bins, patches = pyplot.hist(hist_can, num_bins)  
-pyplot.show()  
+n, bins, patches = pyplot.hist(hist_can, num_bins)
+pyplot.show()
 '''
 
 '''
@@ -238,3 +274,12 @@ pyplot.title('interpolation')
 pyplot.colorbar()
 pyplot.show()
 
+vals = np.reshape(INT2, (ver_pix_num * hor_pix_num))
+pts = np.array([[i,j] for i in np.linspace(0,1,ver_pix_num) for j in np.linspace(0,1,hor_pix_num)] )
+
+grid_x, grid_y = np.mgrid[0:1:ver_pix_num*2j, 0:1:hor_pix_num*2j]
+grid_z = interpolate.griddata(pts, vals, (grid_x, grid_y), method='linear')
+
+pyplot.matshow(INT2)
+pyplot.matshow(grid_z)
+pyplot.show()
